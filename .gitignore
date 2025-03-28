@@ -13,7 +13,9 @@
 *.zip
 *.tar
 *.gz
-
+x-*
+xx-*
+xxx-*
 # Composer
 composer.lock
 

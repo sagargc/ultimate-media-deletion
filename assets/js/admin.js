@@ -1,8 +1,14 @@
-jQuery(function($) {
-    // Add confirmation for bulk actions
+/**
+ * Ultimate Media Deletion Admin JS
+ * 
+ * Handles admin interface enhancements
+ */
+
+jQuery(document).ready(function($) {
+    // Bulk action confirmation
     $('select[name="action"], select[name="action2"]').on('change', function() {
-        if ('delete_with_media' === $(this).val()) {
-            if (!confirm(ultimateMediaDeletion.confirmMessage)) {
+        if ($(this).val() === 'delete_with_media') {
+            if (!confirm(ultimateMediaDeletion.confirmBulkDelete)) {
                 $(this).val('-1');
             }
         }
