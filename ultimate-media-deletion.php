@@ -5,6 +5,7 @@
  * Version: 2.1.0
  * Author: Sagar GC
  * Author URI: https://sagargc.com.np
+ * Plugin URI: https://sagargc.com.np/ultimate-media-deletion 
  * License: GPL-3.0+
  * Text Domain: ultimate-media-deletion
  * Requires PHP: 7.4
