@@ -16,6 +16,7 @@
 x-*
 xx-*
 xxx-*
+.note
 # Composer
 composer.lock
 

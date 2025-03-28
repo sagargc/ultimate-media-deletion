@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<ruleset name="WordPress Coding Standards">
+    <description>Custom rules for Ultimate Media Deletion</description>
+    <rule ref="WordPress"/>
+    <file>./includes</file>
+    <file>./tests</file>
+    <arg name="extensions" value="php"/>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+</ruleset>

@@ -1,6 +1,6 @@
 === Ultimate Media Deletion ===
-Contributors: yourname
-Donate link: https://yourwebsite.com/donate
+Contributors: Sagar GC
+Donate link: https://sagargc.com.np
 Tags: media, deletion, cleanup, acf, attachments
 Requires at least: 5.0
 Tested up to: 6.0

@@ -1,61 +1,24 @@
 {
     "name": "sagargc/ultimate-media-deletion",
-    "description": "Comprehensive WordPress media deletion solution",
+    "description": "WordPress plugin for comprehensive media deletion",
+    "version": "2.1.0",
     "type": "wordpress-plugin",
     "license": "GPL-3.0+",
-    "authors": [
-        {
-            "name": "Sagar GC",
-            "email": "contact@sagargc.com.np",
-            "homepage": "https://sagargc.com.np",
-            "role": "Developer"
-        }
-    ],
     "require": {
-        "php": ">=7.4",
-        "composer/installers": "^2.0"
-    },
-    "require-dev": {
-        "phpunit/phpunit": "^9.0",
-        "wp-coding-standards/wpcs": "^2.3",
-        "phpcompatibility/phpcompatibility-wp": "*",
-        "yoast/phpunit-polyfills": "^1.0",
-        "mockery/mockery": "^1.4",
-        "brain/monkey": "^2.6"
+        "php": ">=7.4"
     },
     "autoload": {
         "psr-4": {
             "UltimateMediaDeletion\\": "includes/"
         }
     },
-    "autoload-dev": {
-        "psr-4": {
-            "UltimateMediaDeletion\\Tests\\": "tests/"
-        }
+    "require-dev": {
+        "wp-coding-standards/wpcs": "^2.3",
+        "phpunit/phpunit": "^9.6"
     },
     "scripts": {
-        "test": "phpunit",
-        "test:coverage": "phpunit --coverage-html coverage",
-        "lint": "phpcs",
-        "lint:fix": "phpcbf",
-        "check-cs": "phpcs --standard=phpcs.xml",
-        "fix-cs": "phpcbf --standard=phpcs.xml"
-    },
-    "scripts-descriptions": {
-        "test": "Run unit tests",
-        "test:coverage": "Generate test coverage report",
-        "lint": "Check code style",
-        "lint:fix": "Fix code style issues",
-        "check-cs": "Check coding standards",
-        "fix-cs": "Fix coding standards issues"
-    },
-    "config": {
-        "allow-plugins": {
-            "composer/installers": true,
-            "dealerdirect/phpcodesniffer-composer-installer": true
-        },
-        "sort-packages": true
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+        "test": "phpunit --verbose",
+        "test:debug": "phpunit --verbose --debug",
+        "test:file": "phpunit --verbose tests/Unit/ExampleTest.php"
+    }
 }
