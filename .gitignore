@@ -1,0 +1,21 @@
+# WordPress
+/wp-content/
+/node_modules/
+/vendor/
+
+# IDE
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Build
+*.zip
+*.tar
+*.gz
+
+# Composer
+composer.lock
+
+# Logs
+*.log.qodo

@@ -1,0 +1,10 @@
+.umd-notice {
+    border-left: 4px solid #00a0d2;
+    padding: 8px 12px;
+}
+.umd-notice.success {
+    border-left-color: #46b450;
+}
+.umd-notice.warning {
+    border-left-color: #ffb900;
+}

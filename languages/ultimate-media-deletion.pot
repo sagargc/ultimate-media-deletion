@@ -1,0 +1,87 @@
+# Copyright (C) 2023 Sagar GC
+# This file is distributed under the GNU General Public License v3.0.
+msgid ""
+msgstr ""
+"Project-Id-Version: Ultimate Media Deletion 2.2.0\n"
+"Report-Msgid-Bugs-To: https://sagargc.com.np\n"
+"POT-Creation-Date: 2023-07-20 14:00+0545\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.0.1\n"
+"X-Domain: ultimate-media-deletion\n"
+
+#: ultimate-media-deletion.php:45
+msgid "Ultimate Media Deletion"
+msgstr ""
+
+#: ultimate-media-deletion.php:46
+msgid "Comprehensive solution for deleting WordPress media including standard attachments, ACF fields, and HTML content images with full admin UI support."
+msgstr ""
+
+#: includes/class-core.php:123
+msgid "Deleted %d media item along with the post."
+msgid_plural "Deleted %d media items along with the post."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-core.php:134
+msgid "Deleted %d post with all associated media."
+msgid_plural "Deleted %d posts with all associated media."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-core.php:147
+msgid "Warning: This will permanently delete %d attached media item."
+msgid_plural "Warning: This will permanently delete %d attached media items."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/class-admin.php:89
+msgid "Delete with media"
+msgstr ""
+
+#: includes/class-admin.php:102
+msgid "Media Deletion"
+msgstr ""
+
+#: includes/class-admin.php:103
+msgid "Ultimate Media Deletion Settings"
+msgstr ""
+
+#: includes/class-admin.php:116
+msgid "General Settings"
+msgstr ""
+
+#: includes/class-admin.php:125
+msgid "Delete ACF Media"
+msgstr ""
+
+#: includes/class-admin.php:126
+msgid "Enable deletion of media in ACF fields"
+msgstr ""
+
+#: includes/helpers.php:56
+msgid "Media"
+msgstr ""
+
+#: includes/views/settings-page.php:12
+msgid "Settings saved successfully."
+msgstr ""
+
+#: includes/views/settings-page.php:20
+msgid "Delete Confirmation"
+msgstr ""
+
+#: includes/views/settings-page.php:24
+msgid "Show confirmation dialog before deleting media"
+msgstr ""
+
+#: assets/js/admin.js:15
+msgid "Are you sure you want to delete all selected posts with their media? This action cannot be undone."
+msgstr ""
