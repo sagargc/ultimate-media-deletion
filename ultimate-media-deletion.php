@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Ultimate Media Deletion
  * Description: Comprehensive media deletion solution for WordPress
- * Version: 2.1.0
+ * Version: 2.1.1
  * Author: Sagar GC
  * Author URI: https://sagargc.com.np
  * Plugin URI: https://sagargc.com.np/ultimate-media-deletion 
