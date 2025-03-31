@@ -1,0 +1,26 @@
+.umd-uninstall-dialog .ui-dialog-titlebar {
+    background: #dc3232;
+    color: white;
+    border: none;
+}
+
+.umd-uninstall-dialog .ui-dialog-content {
+    padding: 20px;
+    line-height: 1.5;
+}
+
+.umd-uninstall-dialog .ui-dialog-buttonpane {
+    padding: 15px 20px;
+    background: #f5f5f5;
+    border-top: 1px solid #ddd;
+}
+
+.umd-uninstall-dialog .ui-dialog-buttonset {
+    float: none;
+    text-align: right;
+}
+
+.umd-uninstall-dialog .ui-button {
+    padding: 5px 15px;
+    margin-left: 10px;
+}

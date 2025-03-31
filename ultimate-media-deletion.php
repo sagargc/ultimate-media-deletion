@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Ultimate Media Deletion
  * Description: Comprehensive media deletion solution for WordPress
- * Version: 2.1.1
+ * Version: 2.1.0
  * Author: Sagar GC
  * Author URI: https://sagargc.com.np
  * Plugin URI: https://sagargc.com.np/ultimate-media-deletion 
@@ -50,20 +50,42 @@ add_action('plugins_loaded', function() {
     new UltimateMediaDeletion\Admin();
 }, 5);
 
-// Register hooks
+// Register activation hook
 register_activation_hook(__FILE__, function($network_wide) {
     require_once UMD_PLUGIN_DIR . 'includes/Core.php';
     UltimateMediaDeletion\Core::activate($network_wide);
 });
 
+// Register deactivation hook
 register_deactivation_hook(__FILE__, function() {
     require_once UMD_PLUGIN_DIR . 'includes/Core.php';
     UltimateMediaDeletion\Core::deactivate();
 });
 
-register_uninstall_hook(__FILE__, [UltimateMediaDeletion\Core::class, 'uninstall']);
+// Register uninstall handler
+register_uninstall_hook(__FILE__, 'umd_uninstall_handler');
 
-// Load test environment if needed
-if (defined('UMD_RUNNING_TESTS') && UMD_RUNNING_TESTS) {
-    require_once UMD_PLUGIN_DIR . 'tests/bootstrap.php';
+/**
+ * Handles plugin uninstallation
+ */
+function umd_uninstall_handler() {
+    require_once UMD_PLUGIN_DIR . 'includes/Core.php';
+    
+    if (method_exists('UltimateMediaDeletion\Core', 'uninstall')) {
+        UltimateMediaDeletion\Core::uninstall();
+    } else {
+        // Fallback cleanup
+        delete_option('ultimate_media_deletion_settings');
+        wp_clear_scheduled_hook('umd_daily_cleanup');
+    }
+}
+
+// Add "View details" link to plugin row
+add_filter('plugin_row_meta', 'umd_custom_view_details_link', 10, 2);
+function umd_custom_view_details_link($links, $file) {
+    if (plugin_basename(__FILE__) === $file) {
+        $view_details_link = '<a href="' . esc_url('https://sagargc.com.np/ultimate-media-deletion') . '" target="_blank">View details</a>';
+        array_splice($links, 1, 0, $view_details_link);
+    }
+    return $links;
 }
