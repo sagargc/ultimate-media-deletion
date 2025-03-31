@@ -13,6 +13,16 @@ class Core {
         
         // Media deletion hooks
         add_action('before_delete_post', [$this, 'delete_all_post_media']);
+
+        // Enhanced bulk actions
+        add_filter('bulk_actions-edit-post', [$this, 'register_bulk_actions']);
+        add_filter('bulk_actions-edit-page', [$this, 'register_bulk_actions']);
+        add_filter('handle_bulk_actions-edit-post', [$this, 'handle_bulk_action'], 10, 3);
+        add_filter('handle_bulk_actions-edit-page', [$this, 'handle_bulk_action'], 10, 3);
+        add_action('admin_notices', [$this, 'bulk_action_admin_notice']);
+        
+        // Add bulk actions for custom post types that support attachments
+        add_action('admin_init', [$this, 'register_bulk_actions_for_custom_types']);
         
         // Scheduled tasks
         add_action('umd_daily_cleanup', [__CLASS__, 'daily_cleanup']);
@@ -23,6 +33,181 @@ class Core {
         // Version check
         add_action('init', [$this, 'version_check']);
     }
+
+    /**
+     * Register bulk actions for custom post types
+     */
+    public function register_bulk_actions_for_custom_types() {
+        $post_types = get_post_types([
+            'show_ui' => true,
+            '_builtin' => false
+        ], 'objects');
+        
+        foreach ($post_types as $post_type) {
+            if (post_type_supports($post_type->name, 'thumbnail') || post_type_supports($post_type->name, 'editor')) {
+                add_filter("bulk_actions-edit-{$post_type->name}", [$this, 'register_bulk_actions']);
+                add_filter("handle_bulk_actions-edit-{$post_type->name}", [$this, 'handle_bulk_action'], 10, 3);
+            }
+        }
+    }
+
+    /**
+     * Handle bulk action with improved permission checks
+     */
+    public function handle_bulk_action($redirect_to, $doaction, $post_ids) {
+        if ($doaction !== 'delete_with_media') {
+            return $redirect_to;
+        }
+        
+        $deleted_count = 0;
+        $skipped_count = 0;
+        $skipped_details = [];
+        
+        // Check if user has bulk delete capability
+        if (!current_user_can('delete_posts')) {
+            wp_die(__('You do not have permission to bulk delete posts.', 'ultimate-media-deletion'));
+        }
+        
+        foreach ($post_ids as $post_id) {
+            $post_id = (int) $post_id;
+            $post_type = get_post_type($post_id);
+            
+            // Check post-specific capabilities
+            if (!current_user_can('delete_post', $post_id)) {
+                $skipped_details[] = [
+                    'id' => $post_id,
+                    'title' => get_the_title($post_id),
+                    'reason' => 'permission_denied'
+                ];
+                $skipped_count++;
+                continue;
+            }
+            
+            // Check if post exists and isn't already deleted
+            $post = get_post($post_id);
+            if (!$post || $post->post_status === 'trash') {
+                $skipped_details[] = [
+                    'id' => $post_id,
+                    'title' => get_the_title($post_id),
+                    'reason' => 'already_deleted'
+                ];
+                $skipped_count++;
+                continue;
+            }
+            
+            // Force delete the post (bypass trash) which will trigger before_delete_post
+            $result = wp_delete_post($post_id, true);
+            
+            if ($result) {
+                $deleted_count++;
+                
+                // Ensure media is deleted (extra safeguard)
+                $this->delete_all_post_media($post_id);
+            } else {
+                $skipped_details[] = [
+                    'id' => $post_id,
+                    'title' => get_the_title($post_id),
+                    'reason' => 'deletion_failed'
+                ];
+                $skipped_count++;
+            }
+        }
+        
+        // Store results in transient for the notice
+        set_transient('umd_bulk_delete_results', [
+            'deleted' => $deleted_count,
+            'skipped' => $skipped_count,
+            'skipped_details' => $skipped_details,
+            'post_type' => !empty($post) ? $post->post_type : 'post'
+        ], 30);
+        
+        return remove_query_arg(['umd_bulk_deleted', 'umd_bulk_skipped'], $redirect_to);
+    }
+
+    /**
+     * Show detailed bulk action notice
+     */
+    public function bulk_action_admin_notice() {
+        $results = get_transient('umd_bulk_delete_results');
+        if (!$results) return;
+        
+        delete_transient('umd_bulk_delete_results');
+        
+        $deleted = $results['deleted'];
+        $skipped = $results['skipped'];
+        $post_type = $results['post_type'];
+        $skipped_details = $results['skipped_details'];
+        
+        if ($deleted > 0) {
+            echo '<div class="notice notice-success is-dismissible">';
+            echo '<p>' . sprintf(
+                _n(
+                    '%d %s deleted permanently with all associated media.',
+                    '%d %s deleted permanently with all associated media.',
+                    $deleted,
+                    'ultimate-media-deletion'
+                ),
+                $deleted,
+                get_post_type_object($post_type)->labels->singular_name
+            ) . '</p>';
+            
+            if ($skipped > 0) {
+                echo '<p>' . sprintf(
+                    _n(
+                        '%d %s could not be deleted.',
+                        '%d %s could not be deleted.',
+                        $skipped,
+                        'ultimate-media-deletion'
+                    ),
+                    $skipped,
+                    get_post_type_object($post_type)->labels->singular_name
+                ) . '</p>';
+                
+                // Show detailed reasons in debug mode or for admins
+                if (defined('WP_DEBUG') && WP_DEBUG || current_user_can('manage_options')) {
+                    echo '<ul style="margin-left:20px;list-style:disc;">';
+                    foreach ($skipped_details as $detail) {
+                        $reason = $this->get_skip_reason_message($detail['reason']);
+                        echo '<li>' . sprintf(
+                            __('%s (ID: %d) - %s', 'ultimate-media-deletion'),
+                            esc_html($detail['title']),
+                            $detail['id'],
+                            $reason
+                        ) . '</li>';
+                    }
+                    echo '</ul>';
+                }
+            }
+            
+            echo '</div>';
+        } elseif ($skipped > 0) {
+            echo '<div class="notice notice-error is-dismissible">';
+            echo '<p>' . sprintf(
+                __('No %s were deleted. %d %s could not be deleted.', 'ultimate-media-deletion'),
+                get_post_type_object($post_type)->labels->name,
+                $skipped,
+                $skipped === 1 ? 
+                    get_post_type_object($post_type)->labels->singular_name :
+                    get_post_type_object($post_type)->labels->name
+            ) . '</p>';
+            echo '</div>';
+        }
+    }
+
+    /**
+     * Get user-friendly skip reason message
+     */
+    private function get_skip_reason_message($reason_code) {
+        $messages = [
+            'permission_denied' => __('Permission denied', 'ultimate-media-deletion'),
+            'already_deleted' => __('Already deleted', 'ultimate-media-deletion'),
+            'deletion_failed' => __('Deletion failed', 'ultimate-media-deletion'),
+            'media_in_use' => __('Media in use elsewhere', 'ultimate-media-deletion')
+        ];
+        
+        return $messages[$reason_code] ?? __('Unknown reason', 'ultimate-media-deletion');
+    }
+
 
     /**
      * Register cleanup hooks
