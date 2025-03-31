@@ -8,14 +8,14 @@ class Admin {
      * Initialize admin functionality
      */
     public function __construct() {
-        // Core functionality
         $this->init_notices();
         $this->init_assets();
         $this->init_bulk_actions();
         $this->init_settings();
         $this->init_uninstall();
-        // Add AJAX handler
+        
         add_action('wp_ajax_umd_process_uninstall', [$this, 'ajax_process_uninstall']);
+        add_action('admin_init', [$this, 'register_post_type_support']);
     }
 
     /**
@@ -37,12 +37,7 @@ class Admin {
      * Initialize bulk actions
      */
     private function init_bulk_actions() {
-        $post_types = ['post', 'page']; // Extendable array of post types
-        
-        foreach ($post_types as $post_type) {
-            add_filter("bulk_actions-edit-{$post_type}", [$this, 'register_bulk_actions']);
-            add_filter("handle_bulk_actions-edit-{$post_type}", [$this, 'handle_bulk_actions'], 10, 3);
-        }
+        add_action('admin_init', [$this, 'register_bulk_actions_for_all_types']);
     }
 
     /**
@@ -62,11 +57,26 @@ class Admin {
     }
 
     /**
+     * Register bulk actions for all supported post types
+     */
+    public function register_bulk_actions_for_all_types() {
+        $post_types = get_post_types(['show_ui' => true], 'objects');
+        
+        foreach ($post_types as $post_type) {
+            if (post_type_supports($post_type->name, 'thumbnail') || post_type_supports($post_type->name, 'editor')) {
+                add_filter("bulk_actions-edit-{$post_type->name}", [$this, 'register_bulk_actions']);
+                add_filter("handle_bulk_actions-edit-{$post_type->name}", [$this, 'handle_bulk_actions'], 10, 3);
+            }
+        }
+    }
+
+    /**
      * Show all admin notices
      */
     public function show_admin_notices() {
         $this->media_deletion_warning();
         $this->bulk_action_notice();
+        $this->show_uninstall_notice();
     }
 
     /**
@@ -75,22 +85,18 @@ class Admin {
     private function media_deletion_warning() {
         global $post;
 
-        if (!isset($_GET['action']) || 'delete' !== $_GET['action'] || !$post) {
+        if (!isset($_GET['action']) || !in_array($_GET['action'], ['delete', 'trash']) || !$post) {
             return;
         }
 
         $media_count = Helpers::count_post_media($post->ID);
         if ($media_count > 0) {
+            $message = $_GET['action'] === 'trash' 
+                ? __('Warning: Trashing this will delete %d attached media items.', 'ultimate-media-deletion')
+                : __('Warning: This will permanently delete %d attached media items.', 'ultimate-media-deletion');
+            
             echo '<div class="notice notice-warning"><p>',
-                sprintf(
-                    _n(
-                        'Warning: This will permanently delete %d attached media item.',
-                        'Warning: This will permanently delete %d attached media items.', 
-                        $media_count,
-                        'ultimate-media-deletion'
-                    ),
-                    $media_count
-                ),
+                sprintf(_n($message, str_replace('%d', '%d', $message), $media_count),
             '</p></div>';
         }
     }
@@ -99,14 +105,14 @@ class Admin {
      * Show bulk action results notice
      */
     private function bulk_action_notice() {
-        if (!empty($_REQUEST['bulk_action']) && 'delete_with_media' === $_REQUEST['bulk_action']) {
+        if (!empty($_REQUEST['bulk_action']) && $_REQUEST['bulk_action'] === 'delete_with_media') {
             $count = intval($_REQUEST['deleted_with_media'] ?? 0);
             
             echo '<div class="notice notice-success is-dismissible"><p>',
                 sprintf(
                     _n(
-                        'Deleted %d post with all attached media.',
-                        'Deleted %d posts with all attached media.',
+                        'Deleted %d item with all attached media.',
+                        'Deleted %d items with all attached media.',
                         $count,
                         'ultimate-media-deletion'
                     ),
@@ -117,16 +123,31 @@ class Admin {
     }
 
     /**
+     * Show uninstall success notice
+     */
+    private function show_uninstall_notice() {
+        if (!empty($_GET['umd_uninstalled'])) {
+            echo '<div class="notice notice-success is-dismissible"><p>',
+                __('Ultimate Media Deletion was successfully uninstalled.', 'ultimate-media-deletion'),
+            '</p></div>';
+        }
+    }
+
+    /**
      * Enqueue admin assets
      */
     public function enqueue_assets($hook) {
-        // Load on plugin pages and edit screens
-        if ('edit.php' === $hook || strpos($hook, 'ultimate-media-deletion') !== false) {
+        // Load on all admin pages where needed
+        if (
+            'edit.php' === $hook || 
+            strpos($hook, 'ultimate-media-deletion') !== false ||
+            'plugins.php' === $hook
+        ) {
             $this->enqueue_core_assets();
         }
         
         // Load uninstall dialog only when needed
-        if ($hook === 'plugins.php' && isset($_GET['keep_logs_prompt'])) {
+        if ('plugins.php' === $hook && isset($_GET['keep_logs_prompt'])) {
             $this->enqueue_uninstall_assets();
         }
     }
@@ -135,6 +156,13 @@ class Admin {
      * Enqueue core admin assets
      */
     private function enqueue_core_assets() {
+        wp_enqueue_style(
+            'umd-admin-css',
+            UMD_PLUGIN_URL . 'assets/css/admin.css',
+            [],
+            UMD_VERSION
+        );
+
         wp_enqueue_script(
             'umd-admin-js',
             UMD_PLUGIN_URL . 'assets/js/admin.js',
@@ -142,28 +170,52 @@ class Admin {
             UMD_VERSION,
             true
         );
-        
-        wp_enqueue_style(
-            'umd-admin-css',
-            UMD_PLUGIN_URL . 'assets/css/admin.css',
-            [],
-            UMD_VERSION
-        );
-        
+
         wp_localize_script('umd-admin-js', 'umd_admin', [
-            'confirm_delete' => __('Are you sure you want to delete this media?', 'ultimate-media-deletion'),
             'ajax_url' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('umd_admin_nonce')
+            'nonce' => wp_create_nonce('umd_admin_nonce'),
+            'i18n' => [
+                'confirm_delete' => __('Are you sure you want to delete this media?', 'ultimate-media-deletion'),
+                'processing' => __('Processing...', 'ultimate-media-deletion')
+            ]
         ]);
     }
-   
+
+    /**
+     * Enqueue uninstall dialog assets
+     */
+    private function enqueue_uninstall_assets() {
+        wp_enqueue_style(
+            'umd-uninstall-dialog',
+            UMD_PLUGIN_URL . 'assets/css/uninstall-dialog.css',
+            ['wp-jquery-ui-dialog'],
+            UMD_VERSION
+        );
+
+        wp_enqueue_script(
+            'umd-uninstall-dialog',
+            UMD_PLUGIN_URL . 'assets/js/uninstall-dialog.js',
+            ['jquery', 'jquery-ui-dialog', 'wp-util'],
+            UMD_VERSION,
+            true
+        );
+
+        wp_localize_script('umd-uninstall-dialog', 'umdUninstallData', [
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('umd_uninstall_nonce'),
+            'dialog_title' => __('Ultimate Media Deletion Uninstall', 'ultimate-media-deletion'),
+            'keep_logs_text' => __('Keep Logs', 'ultimate-media-deletion'),
+            'delete_all_text' => __('Delete All Data', 'ultimate-media-deletion'),
+            'delete_confirm' => __('This will permanently delete ALL logs and cannot be undone. Continue?', 'ultimate-media-deletion')
+        ]);
+    }
 
     /**
      * Register bulk actions
      */
     public function register_bulk_actions($bulk_actions) {
-        if (current_user_can('delete_with_media')) {
-            $bulk_actions['delete_with_media'] = __('Delete with media', 'ultimate-media-deletion');
+        if (current_user_can('delete_posts')) {
+            $bulk_actions['delete_with_media'] = __('Delete Permanently with Media', 'ultimate-media-deletion');
         }
         return $bulk_actions;
     }
@@ -172,16 +224,14 @@ class Admin {
      * Handle bulk actions
      */
     public function handle_bulk_actions($redirect_to, $doaction, $post_ids) {
-        if ('delete_with_media' !== $doaction || !current_user_can('delete_with_media')) {
+        if ('delete_with_media' !== $doaction || !current_user_can('delete_posts')) {
             return $redirect_to;
         }
 
         $deleted = 0;
-        $core = new Core();
         
         foreach ($post_ids as $post_id) {
-            $core->delete_all_post_media($post_id);
-            if (wp_delete_post($post_id, true)) {
+            if (current_user_can('delete_post', $post_id) && wp_delete_post($post_id, true)) {
                 $deleted++;
             }
         }
@@ -198,27 +248,33 @@ class Admin {
     public function single_delete_confirmation() {
         global $post;
         
-        if (!isset($_GET['action']) || 'delete' !== $_GET['action'] || !$post) {
+        $current_screen = get_current_screen();
+        if (!$current_screen || !in_array($current_screen->base, ['edit', 'post'])) {
             return;
         }
 
-        $media_count = Helpers::count_post_media($post->ID);
+        $post_id = isset($_GET['post']) ? $_GET['post'] : ($post->ID ?? 0);
+        $action = $_GET['action'] ?? '';
+
+        if (!in_array($action, ['delete', 'trash']) {
+            return;
+        }
+
+        $media_count = Helpers::count_post_media($post_id);
         if ($media_count > 0) {
+            $message = $action === 'trash' 
+                ? __('Trashing this will delete %d media items. Continue?', 'ultimate-media-deletion')
+                : __('This will permanently delete %d media items. Continue?', 'ultimate-media-deletion');
             ?>
             <script>
             jQuery(document).ready(function($) {
-                $('form#delete-post').on('submit', function(e) {
-                    return confirm('<?php 
-                        printf(
-                            _n(
-                                'This will delete %d media item. Are you sure?',
-                                'This will delete %d media items. Are you sure?',
-                                $media_count,
-                                'ultimate-media-deletion'
-                            ),
-                            $media_count
-                        );
-                    ?>');
+                $('form#delete-post, form#posts-filter').on('submit', function(e) {
+                    if ($('select[name="action"]').val() === 'trash' || 
+                        $('select[name="action2"]').val() === 'trash' ||
+                        window.location.href.indexOf('action=trash') > -1) {
+                        return confirm('<?php printf(_n($message, str_replace('%d', '%d', $message), $media_count); ?>');
+                    }
+                    return true;
                 });
             });
             </script>
@@ -247,8 +303,17 @@ class Admin {
             __('Settings', 'ultimate-media-deletion'),
             __('Settings', 'ultimate-media-deletion'),
             'manage_options',
-            'ultimate-media-deletion-settings',
+            $menu_slug,
             [$this, 'render_settings_page']
+        );
+        
+        add_submenu_page(
+            $menu_slug,
+            __('Logs', 'ultimate-media-deletion'),
+            __('Logs', 'ultimate-media-deletion'),
+            'view_media_deletion_logs',
+            'ultimate-media-deletion-logs',
+            [$this, 'render_logs_page']
         );
     }
 
@@ -264,6 +329,17 @@ class Admin {
     }
 
     /**
+     * Render logs page
+     */
+    public function render_logs_page() {
+        if (!current_user_can('view_media_deletion_logs')) {
+            wp_die(__('You do not have sufficient permissions to access this page.', 'ultimate-media-deletion'));
+        }
+        
+        include UMD_PLUGIN_DIR . 'templates/admin/logs.php';
+    }
+
+    /**
      * Register plugin settings
      */
     public function register_settings() {
@@ -276,23 +352,42 @@ class Admin {
             'ultimate-media-deletion'
         );
         
-        $this->add_settings_field('delete_acf_media', __('Delete ACF Media', 'ultimate-media-deletion'), __('Delete media referenced in ACF fields', 'ultimate-media-deletion'));
-        $this->add_settings_field('delete_embedded', __('Delete Embedded Media', 'ultimate-media-deletion'), __('Delete media embedded in content', 'ultimate-media-deletion'));
+        $this->add_settings_field(
+            'delete_on_trash',
+            __('Delete Media on Trash', 'ultimate-media-deletion'),
+            __('Delete associated media when posts are trashed (not just when permanently deleted)', 'ultimate-media-deletion'),
+            'checkbox'
+        );
+        
+        $this->add_settings_field(
+            'delete_acf_media',
+            __('Delete ACF Media', 'ultimate-media-deletion'),
+            __('Delete media referenced in ACF fields', 'ultimate-media-deletion'),
+            'checkbox'
+        );
+        
+        $this->add_settings_field(
+            'delete_embedded',
+            __('Delete Embedded Media', 'ultimate-media-deletion'),
+            __('Delete media embedded in content', 'ultimate-media-deletion'),
+            'checkbox'
+        );
     }
 
     /**
      * Add settings field helper
      */
-    private function add_settings_field($name, $title, $description) {
+    private function add_settings_field($name, $title, $description, $type = 'checkbox') {
         add_settings_field(
             $name,
             $title,
-            [$this, 'render_checkbox_field'],
+            [$this, 'render_settings_field'],
             'ultimate-media-deletion',
             'umd_general_section',
             [
                 'name' => $name,
-                'label' => $description
+                'label' => $description,
+                'type' => $type
             ]
         );
     }
@@ -305,18 +400,23 @@ class Admin {
     }
 
     /**
-     * Render checkbox field
+     * Render settings field
      */
-    public function render_checkbox_field($args) {
+    public function render_settings_field($args) {
         $options = get_option('umd_settings');
-        $checked = isset($options[$args['name']]) ? checked(1, $options[$args['name']], false) : '';
+        $value = $options[$args['name']] ?? '';
         
-        echo '<label><input type="checkbox" name="umd_settings[', esc_attr($args['name']), ']" value="1" ', $checked, '> ',
-            esc_html($args['label']),
-        '</label>';
+        switch ($args['type']) {
+            case 'checkbox':
+                echo '<label><input type="checkbox" name="umd_settings[' . esc_attr($args['name']) . ']" value="1" ' . checked(1, $value, false) . '> ',
+                    esc_html($args['label']),
+                '</label>';
+                break;
+                
+            // Add other field types as needed
+        }
     }
 
-    
     /**
      * Add uninstall link to plugin actions
      */
@@ -335,7 +435,6 @@ class Admin {
         return $actions;
     }
 
-    
     /**
      * Handle uninstall requests
      */
@@ -343,21 +442,18 @@ class Admin {
         if (isset($_GET['umd_uninstall']) && current_user_can('delete_plugins')) {
             check_admin_referer('umd_uninstall_nonce');
             
+            if (wp_doing_ajax()) {
+                $this->ajax_process_uninstall();
+                return;
+            }
+            
             $keep_logs = isset($_GET['keep_logs']) && $_GET['keep_logs'] === 'yes' ? 'yes' : 'no';
             update_option('umd_keep_logs_on_uninstall', $keep_logs);
             
-            // Set transient for success message
-            set_transient('umd_uninstall_success', '1', 30);
+            Core::uninstall();
             
-            // Return JSON response for AJAX handling
-            if (wp_doing_ajax()) {
-                wp_send_json_success([
-                    'redirect' => admin_url('plugins.php?umd_uninstalled=1')
-                ]);
-            } else {
-                wp_redirect(admin_url('plugins.php?umd_uninstalled=1'));
-                exit;
-            }
+            wp_redirect(admin_url('plugins.php?umd_uninstalled=1'));
+            exit;
         }
     }
 
@@ -374,53 +470,10 @@ class Admin {
         $keep_logs = isset($_POST['keep_logs']) && $_POST['keep_logs'] === 'yes' ? 'yes' : 'no';
         update_option('umd_keep_logs_on_uninstall', $keep_logs);
         
-        // Perform actual uninstall
         Core::uninstall();
         
         wp_send_json_success([
             'redirect' => admin_url('plugins.php?umd_uninstalled=1')
         ]);
-    }
-
-    /**
-     * Enqueue uninstall dialog assets
-     */
-    private function enqueue_uninstall_assets() {
-        wp_enqueue_style(
-            'umd-uninstall-dialog',
-            UMD_PLUGIN_URL . 'assets/css/uninstall-dialog.css',
-            [],
-            UMD_VERSION
-        );
-        
-        wp_enqueue_script(
-            'umd-uninstall-dialog',
-            UMD_PLUGIN_URL . 'assets/js/uninstall-dialog.js',
-            ['jquery-ui-dialog', 'wp-util'],
-            UMD_VERSION,
-            true
-        );
-        
-        $screen = get_current_screen();
-        $show_success = isset($_GET['umd_uninstalled']);
-        
-        wp_localize_script(
-            'umd-uninstall-dialog',
-            'umdUninstallData',
-            [
-                'dialogTitle' => __('Ultimate Media Deletion Uninstall', 'ultimate-media-deletion'),
-                'keepLogsText' => __('Keep Logs', 'ultimate-media-deletion'),
-                'deleteAllText' => __('Delete All Data', 'ultimate-media-deletion'),
-                'deleteConfirm' => __('This will permanently delete ALL logs and cannot be undone. Continue?', 'ultimate-media-deletion'),
-                'successMessage' => __('Ultimate Media Deletion was successfully uninstalled.', 'ultimate-media-deletion'),
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('umd_uninstall_nonce'),
-                'showSuccess' => $show_success && $screen->id === 'plugins',
-                'uninstallUrl' => esc_url(wp_nonce_url(
-                    admin_url('plugins.php?umd_uninstall=1'),
-                    'umd_uninstall_nonce'
-                ))
-            ]
-        );
     }
 }

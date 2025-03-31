@@ -1,6 +1,4 @@
 <?php
-// includes/functions.php
-
 if (!defined('ABSPATH')) exit;
 
 /**
@@ -18,10 +16,10 @@ function umd_is_image_url($url) {
 }
 
 /**
- * Get plugin version
+ * Get plugin version 
  */
 function umd_get_version() {
-    return UMD_VERSION;
+    return defined('UMD_VERSION') ? UMD_VERSION : '1.0.0';
 }
 
 /**
@@ -31,4 +29,16 @@ function umd_activate_plugin($network_wide = false) {
     UltimateMediaDeletion\Core::activate($network_wide);
 }
 
-// Add other utility functions as needed
+/**
+ * Delete file by URL (public wrapper)
+ */
+function umd_delete_file_by_url($url) {
+    return UltimateMediaDeletion\Helpers::delete_file_by_url($url);
+}
+
+/**
+ * Get human-readable file size
+ */
+function umd_get_file_size($file_path) {
+    return UltimateMediaDeletion\Helpers::get_file_size($file_path);
+}
