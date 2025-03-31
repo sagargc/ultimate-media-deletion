@@ -87,7 +87,7 @@ Start with small batches
 
 == Upgrade Notice ==
 
-🛑 **Before upgrading**:
+**Before upgrading**:
 1. Backup your database
 2. Backup wp-content/uploads
 3. Test in staging environment
