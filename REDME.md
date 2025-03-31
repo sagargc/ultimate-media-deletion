@@ -1,27 +1,23 @@
 # Ultimate Media Deletion WordPress Plugin
 
-[![WordPress Plugin Version](https://img.shields.io/wordpress/plugin/v/ultimate-media-deletion)](https://wordpress.org/plugins/ultimate-media-deletion)
-[![License](https://img.shields.io/badge/license-GPL--3.0%2B-green)](LICENSE)
-[![PHP Tests](https://github.com/sagargc/ultimate-media-deletion/actions/workflows/php-tests.yml/badge.svg)](https://github.com/sagargc/ultimate-media-deletion/actions)
-
 ![Plugin Banner](assets/banner-1544x500.png)
 
-Comprehensive solution for deleting WordPress media including standard attachments, ACF fields, and HTML content images.
+> ⚠️ **Critical Warning**: Always create complete backups of your database and `wp-content/uploads` folder before using this plugin. Deletions are permanent.
 
-## Features
+[![WordPress Version](https://img.shields.io/badge/WordPress-5.6%20to%206.7.2-blue)](https://wordpress.org/)
+[![PHP Version](https://img.shields.io/badge/PHP-7.4%20to%208.2.13-777bb3)](https://php.net/)
+[![License](https://img.shields.io/badge/license-GPL--2.0%2B-green)](LICENSE)
 
-- 🗑️ Delete all media associated with posts/pages
-- 🖼️ Supports standard WordPress attachments
-- 🔄 Handles ACF fields (image, gallery, flexible content)
-- ✂️ Processes HTML content images
-- ⚡ Bulk deletion with media
-- ⚠️ Admin confirmation dialogs
-- 📊 Detailed deletion reports
+## 🔥 Features
 
-## Installation
+### 🧹 Enhanced Cleanup Tools
+- **Orphaned Data Removal** - Auto-deletes unused metadata and revisions
+- **Smart Media Scanning** - 3-level verification before deletion
+- **Bulk Operations** - Process multiple posts at once
 
-1. Upload the plugin files to `/wp-content/plugins/ultimate-media-deletion`
-2. Activate the plugin through WordPress admin
-3. Or install via Composer:
-   ```bash
-   composer require sagargc/ultimate-media-deletion
+### 🛡️ Safety Systems
+```php
+// Built-in protection mechanisms
+1. Cross-reference checking
+2. Dry-run mode via WP-CLI
+3. Comprehensive activity logs
